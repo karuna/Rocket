@@ -59,6 +59,8 @@ pub struct Config {
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
     pub config_path: PathBuf,
+    /// The default_format to be used for handling catchers
+    pub default_format: String,
 }
 
 macro_rules! config_from_raw {
@@ -219,6 +221,7 @@ impl Config {
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
+                    default_format: DefaultFormat::default().format().clone(),
                 }
             }
             Staging => {
@@ -233,6 +236,7 @@ impl Config {
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
+                    default_format: DefaultFormat::default().format().clone(),
                 }
             }
             Production => {
@@ -247,6 +251,7 @@ impl Config {
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
+                    default_format: DefaultFormat::default().format().clone(),
                 }
             }
         })
@@ -287,7 +292,8 @@ impl Config {
             secret_key => (str, set_secret_key, id),
             log => (log_level, set_log_level, ok),
             tls => (tls_config, set_raw_tls, id),
-            limits => (limits, set_limits, ok)
+            limits => (limits, set_limits, ok),
+            default_format => (str, set_default_format, id)
             | _ => {
                 self.extras.insert(name.into(), val.clone());
                 Ok(())
@@ -560,6 +566,46 @@ impl Config {
     #[inline]
     pub fn set_extras(&mut self, extras: HashMap<String, Value>) {
         self.extras = extras;
+    }
+
+    /// Sets the default_format of `self` to `default_format`. This `default_format`
+    /// will be used for default Content-Type for catchers.
+    /// Supported format is one of the following:
+    ///
+    /// "application/json", "application/javascript", "application/xml",
+    /// "application/xhtml+xml", "text/html", "text/plain", "text/javascript",
+    /// "text/xml"
+    ///
+    /// # Errors
+    ///
+    /// If `default_format` is not a one of the valid Content-Type, returns a `BadType`
+    /// error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// assert!(config.set_default_format("text/html").is_ok());
+    /// assert!(config.set_default_format("application/json").is_ok());
+    /// assert!(config.set_default_format("audio/vorbis").is_err());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn set_default_format(&mut self, default_format: &str) -> Result<()> {
+
+        if DefaultFormat::allowed_formats().iter().find(|&&x| x == default_format).is_none() {
+            return Err(self.bad_type("default_format", "string",
+                "must be one of 'application/json', 'application/javascript',
+'application/xml', 'application/xhtml+xml', 'text/html', 'text/plain',
+'text/javascript', 'text/xml'"));
+        }
+
+        self.default_format = default_format.to_string();
+        Ok(())
     }
 
     /// Returns an iterator over the names and values of all of the extras in

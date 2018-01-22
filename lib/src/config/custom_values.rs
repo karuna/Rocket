@@ -260,3 +260,29 @@ pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
 
     Ok(limits)
 }
+
+#[derive(Debug, Clone)]
+pub struct DefaultFormat {
+    format: String,
+}
+
+impl Default for DefaultFormat {
+    fn default() -> DefaultFormat {
+        // Default Content Type is "text/html".
+        DefaultFormat { format: "text/html".to_string() }
+    }
+}
+
+impl DefaultFormat {
+    pub fn allowed_formats() -> &'static [&'static str] {
+        &[
+            "application/json", "application/javascript", "application/xml",
+            "application/xhtml+xml", "text/html", "text/plain", "text/javascript",
+            "text/xml"
+        ]
+    }
+
+    pub fn format(&self) -> &String {
+        &self.format
+    }
+}
