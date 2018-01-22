@@ -26,6 +26,8 @@ pub struct ConfigBuilder {
     pub extras: HashMap<String, Value>,
     /// The root directory of this config.
     pub root: PathBuf,
+    /// The default_content_type to be used for handling catchers
+    pub default_content_type: String,
 }
 
 impl ConfigBuilder {
@@ -69,6 +71,7 @@ impl ConfigBuilder {
             limits: config.limits,
             extras: config.extras,
             root: root_dir,
+            default_content_type: config.default_content_type,
         }
     }
 
@@ -242,6 +245,30 @@ impl ConfigBuilder {
         self
     }
 
+    /// Sets the default_content_type in the configuration being built.
+    ///
+    /// `default_content_type` will be used for default Content-Type for catchers.
+    /// Only support
+    /// "application/json", "application/javascript", "application/xml",
+    /// "application/xhtml+xml", "text/html", "text/plain", "text/javascript",
+    /// "text/xml"
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// let mut config = Config::build(Environment::Staging)
+    ///     .default_content_type("text/xml")
+    /// # ; /*
+    ///     .unwrap();
+    /// # */
+    /// ```
+    pub fn default_content_type<A: Into<String>>(mut self, default_content_type: A) -> Self {
+        self.default_content_type = default_content_type.into();
+        self
+    }
+
     /// Adds an extra configuration parameter with `name` and `value` to the
     /// configuration being built. The value can be any type that implements
     /// `Into<Value>` including `&str`, `String`, `Vec<V: Into<Value>>`,
@@ -302,7 +329,7 @@ impl ConfigBuilder {
         config.set_extras(self.extras);
         config.set_root(self.root);
         config.set_limits(self.limits);
-
+        config.set_default_content_type(&self.default_content_type);
         if let Some((certs_path, key_path)) = self.tls {
             config.set_tls(&certs_path, &key_path)?;
         }

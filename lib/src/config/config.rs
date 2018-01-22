@@ -59,6 +59,8 @@ pub struct Config {
     pub extras: HashMap<String, Value>,
     /// The path to the configuration file this config belongs to.
     pub config_path: PathBuf,
+    /// The default_content_type to be used for handling catchers
+    pub default_content_type: String,
 }
 
 macro_rules! config_from_raw {
@@ -219,6 +221,7 @@ impl Config {
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
+                    default_content_type: DefaultContentType::default().content_type().clone(),
                 }
             }
             Staging => {
@@ -233,6 +236,7 @@ impl Config {
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
+                    default_content_type: DefaultContentType::default().content_type().clone(),
                 }
             }
             Production => {
@@ -247,6 +251,7 @@ impl Config {
                     limits: Limits::default(),
                     extras: HashMap::new(),
                     config_path: config_path,
+                    default_content_type: DefaultContentType::default().content_type().clone(),
                 }
             }
         })
@@ -287,7 +292,8 @@ impl Config {
             secret_key => (str, set_secret_key, id),
             log => (log_level, set_log_level, ok),
             tls => (tls_config, set_raw_tls, id),
-            limits => (limits, set_limits, ok)
+            limits => (limits, set_limits, ok),
+            default_content_type => (str, set_default_content_type, id)
             | _ => {
                 self.extras.insert(name.into(), val.clone());
                 Ok(())
@@ -560,6 +566,45 @@ impl Config {
     #[inline]
     pub fn set_extras(&mut self, extras: HashMap<String, Value>) {
         self.extras = extras;
+    }
+
+    /// Sets the default_content_type of `self` to `default_content_type`. This `default_content_type`
+    /// will be used for default Content-Type for catchers.
+    /// Only support
+    /// "application/json", "application/javascript", "application/xml",
+    /// "application/xhtml+xml", "text/html", "text/plain", "text/javascript",
+    /// "text/xml"
+    ///
+    /// # Errors
+    ///
+    /// If `default_content_type` is not a one of the valid Content-Type, returns a `BadType`
+    /// error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::config::{Config, Environment};
+    ///
+    /// # use rocket::config::ConfigError;
+    /// # fn config_test() -> Result<(), ConfigError> {
+    /// let mut config = Config::new(Environment::Staging)?;
+    /// assert!(config.set_default_content_type("text/html").is_ok());
+    /// assert!(config.set_default_content_type("application/json").is_ok());
+    /// assert!(config.set_default_content_type("audio/vorbis").is_err());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn set_default_content_type(&mut self, default_content_type: &str) -> Result<()> {
+
+        if DefaultContentType::allowed_content_types().iter().find(|&&x| x == default_content_type).is_none() {
+            return Err(self.bad_type("default_content_type", "string",
+                "must be one of 'application/json', 'application/javascript',
+'application/xml', 'application/xhtml+xml', 'text/html', 'text/plain',
+'text/javascript', 'text/xml'"));
+        }
+
+        self.default_content_type = default_content_type.to_string();
+        Ok(())
     }
 
     /// Returns an iterator over the names and values of all of the extras in

@@ -260,3 +260,29 @@ pub fn limits(conf: &Config, name: &str, value: &Value) -> Result<Limits> {
 
     Ok(limits)
 }
+
+#[derive(Debug, Clone)]
+pub struct DefaultContentType {
+    content_type: String,
+}
+
+impl Default for DefaultContentType {
+    fn default() -> DefaultContentType {
+        // Default Content Type is "text/html".
+        DefaultContentType { content_type: "text/html".to_string() }
+    }
+}
+
+impl DefaultContentType {
+    pub fn allowed_content_types() -> &'static [&'static str] {
+        &[
+            "application/json", "application/javascript", "application/xml",
+            "application/xhtml+xml", "text/html", "text/plain", "text/javascript",
+            "text/xml"
+        ]
+    }
+
+    pub fn content_type(&self) -> &String {
+        &self.content_type
+    }
+}
