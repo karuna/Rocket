@@ -9,6 +9,8 @@ use utils::{span, MetaItemExt, SpanExt, is_valid_ident};
 use super::Function;
 use super::keyvalue::KVSpanned;
 use super::uri::validate_uri;
+use super::common::{parse_opt, parse_format};
+
 use rocket::http::{Method, MediaType};
 use rocket::http::uri::Uri;
 
@@ -211,11 +213,7 @@ fn parse_path(ecx: &ExtCtxt,
     (dummy_spanned(Uri::new("")), None)
 }
 
-fn parse_opt<O, T, F>(ecx: &ExtCtxt, kv: &KVSpanned<T>, f: F) -> Option<KVSpanned<O>>
-    where F: Fn(&ExtCtxt, &KVSpanned<T>) -> O
-{
-    Some(kv.map_ref(|_| f(ecx, kv)))
-}
+
 
 fn parse_data(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> Ident {
     let mut ident = Ident::from_str("unknown");
@@ -254,27 +252,4 @@ fn parse_rank(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> isize {
     }
 
     -1
-}
-
-fn parse_format(ecx: &ExtCtxt, kv: &KVSpanned<LitKind>) -> MediaType {
-    if let LitKind::Str(ref s, _) = *kv.value() {
-        if let Ok(ct) = MediaType::from_str(&s.as_str()) {
-            if !ct.is_known() {
-                let msg = format!("'{}' is not a known media type", s);
-                ecx.span_warn(kv.value.span, &msg);
-            }
-
-            return ct;
-        } else {
-            ecx.span_err(kv.value.span, "malformed media type");
-        }
-    }
-
-    ecx.struct_span_err(kv.span, r#"`format` must be a "media/type""#)
-        .help(r#"format, if specified, must be a key-value pair where
-              the key is `format` and the value is a string representing the
-              media type accepted. e.g: format = "application/json""#)
-        .emit();
-
-    MediaType::Any
 }

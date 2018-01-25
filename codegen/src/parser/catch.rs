@@ -2,15 +2,19 @@ use syntax::ast::*;
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::codemap::{Span, Spanned, dummy_spanned};
 
-use rocket::http::Status;
+use rocket::http::{MediaType, Status};
 
 use utils::{span, MetaItemExt};
 use super::Function;
+use super::keyvalue::KVSpanned;
+use super::route::kv_from_nested;
+use super::common::{parse_opt, parse_format};
 
 /// This structure represents the parsed `catch` attribute.
 pub struct CatchParams {
     pub annotated_fn: Function,
     pub code: Spanned<u16>,
+    pub format: Option<KVSpanned<MediaType>>,
 }
 
 impl CatchParams {
@@ -36,13 +40,14 @@ impl CatchParams {
 
         if meta_items.len() < 1 {
             ecx.span_fatal(sp, "attribute requires the `code` parameter");
-        } else if meta_items.len() > 1 {
-            ecx.span_fatal(sp, "attribute can only have one `code` parameter");
+        } else if meta_items.len() > 2 {
+            ecx.span_fatal(sp, "attribute can only have `code` parameter and `format`");
         }
 
         CatchParams {
             annotated_fn: function,
-            code: parse_code(ecx, &meta_items[0])
+            code: parse_code(ecx, &meta_items[0]),
+            format: local_parse_format(ecx, &meta_items),
         }
     }
 }
@@ -80,4 +85,26 @@ fn parse_code(ecx: &ExtCtxt, meta_item: &NestedMetaItem) -> Spanned<u16> {
     }
 
     dummy_spanned(0)
+}
+
+fn local_parse_format(ecx: &ExtCtxt, meta_items: &[NestedMetaItem]) -> Option<KVSpanned<MediaType>> {
+    if meta_items.len() == 2 {
+        let kv_opt = kv_from_nested(&meta_items[1]);
+        if kv_opt.is_none() {
+            return None
+        }
+
+        let kv = kv_opt.unwrap();
+        match kv.key().as_str() {
+            "format" => parse_opt(ecx, &kv, parse_format),
+            _ => {
+                let msg = format!("'{}' is not a known parameter", kv.key());
+                ecx.span_err(kv.span, &msg);
+                return None
+            }
+        }
+    } else {
+        None
+    }
+
 }

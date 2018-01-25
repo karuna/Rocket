@@ -23,9 +23,9 @@ impl CatchGenerateExt for CatchParams {
 
         // Retrieve the params from the user's handler and check the number.
         let input_args = &self.annotated_fn.decl().inputs;
-        if input_args.len() > 2 {
+        if input_args.len() > 3 {
             let sp = self.annotated_fn.span();
-            ecx.struct_span_err(sp, "error catchers can have at most 2 arguments")
+            ecx.struct_span_err(sp, "error catchers can have at most 3 arguments")
                 .help(arg_help).emit()
         }
 
